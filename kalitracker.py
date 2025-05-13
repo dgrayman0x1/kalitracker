@@ -1,13 +1,13 @@
-#! /usr/bin/env python3 
-import os 
+#!/usr/bin/env python3
 
-print("KaliTracker script started")
+import os
 
-def get_user_input(): 
+print("KaliTracker script started")  # Debug line
 
-    print("[+] Welcome to KaliTracker")
+def get_user_input():
+    print("[+] Welcome to KaliTracker Setup")
 
-    #Directory to monitor 
+    # Directory to monitor
     default_dir = os.path.expanduser("~/")
     monitor_dir = input(f"Enter directory to monitor [{default_dir}]: ").strip()
     if monitor_dir == "":
@@ -27,6 +27,7 @@ def get_user_input():
     auto_push = False
     if github_repo:
         auto_push = input("Do you want to auto-commit & push to GitHub every run? [y/N]: ").strip().lower() == "y"
+
     print("\n[+] Configuration complete.\n")
 
     return {
@@ -36,3 +37,10 @@ def get_user_input():
         "github_repo": github_repo,
         "auto_push": auto_push
     }
+
+# Entry point
+if __name__ == "__main__":
+    config = get_user_input()
+    print("[*] Your Config:")
+    for key, value in config.items():
+        print(f"    {key}: {value}")
