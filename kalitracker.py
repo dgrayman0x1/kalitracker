@@ -23,6 +23,30 @@ def get_user_input():
         "auto_push": auto_push
     }
 
+def find_new_files(directory, known_files):
+    new_files = []
+    for root, dirs, files in os.walk(directory, topdown=True, followlinks=False):
+        # Optionally skip system directories to reduce noise (optional)
+        # dirs[:] = [d for d in dirs if not d.startswith("proc")]
+
+        for name in files:
+            try:
+                full_path = os.path.join(root, name)
+
+                # Skip if it's a symlink
+                if os.path.islink(full_path):
+                    continue
+
+                mtime = os.path.getmtime(full_path)
+                if full_path not in known_files:
+                    new_files.append((full_path, mtime))
+            except Exception as e:
+                # Print or log errors, but don’t crash the script
+                print(f"  [!] Skipping {full_path}: {e}")
+                continue
+    return new_files
+
+
 # Entry point
 if __name__ == "__main__":
     config = get_user_input()
