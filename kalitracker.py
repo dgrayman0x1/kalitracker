@@ -10,7 +10,7 @@ def get_user_input():
     print("[+] Welcome to KaliTracker Setup")
 
     # Prompt for directory and expand ~ to full home directory
-    default_dir = os.path.expanduser("~/")
+    default_dir = os.path.expanduser("~/Downloads")  # Default to Downloads for simplicity
     monitor_dir = input(f"Enter directory to monitor [{default_dir}]: ").strip() or default_dir
     monitor_dir = os.path.abspath(os.path.expanduser(monitor_dir))
 
@@ -59,10 +59,12 @@ def find_recent_files(directory):
 
                 if mtime >= cutoff:
                     new_files.append((full_path, mtime))
+                print(f"  [*] Found file: {full_path} | Modified: {mtime}")  # Debug print
             except Exception as e:
                 print(f"  [!] Skipping {full_path}: {e}")
                 continue
 
+    # Reading the previous snapshot to detect deletions
     previous_files = set()
     if os.path.exists(SNAPSHOT_FILE):
         try:
