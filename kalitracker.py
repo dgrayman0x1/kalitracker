@@ -59,8 +59,12 @@ def log_to_changelog(new_files):
 
     print(f"[+] Logged {len(new_files)} new files to {CHANGELOG_FILE}")
 
-def push_to_github(repo_url, files_to_commit):
+def push_to_github(repo_url, files_to_commit, token=None):
     try:
+        # If a token is provided, include it in the repo URL
+        if token:
+            repo_url = repo_url.replace("https://", f"https://{token}@")
+        
         # Ensure we're in a git repo
         if not os.path.isdir(".git"):
             subprocess.run(["git", "init"], check=True)
