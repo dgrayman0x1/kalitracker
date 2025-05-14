@@ -6,6 +6,7 @@ from datetime import datetime
 CHANGELOG_FILE = "changelog.json"
 
 def get_user_input():
+    import subprocess
     print("[+] Welcome to KaliTracker Setup")
 
     # Prompt for directory and expand ~ to full home directory
@@ -18,16 +19,24 @@ def get_user_input():
     github_repo = input("Enter your GitHub repo URL (leave blank to skip): ").strip()
     auto_push = github_repo and input("Auto-commit & push to GitHub every run? [y/N]: ").strip().lower() == "y"
 
-    # If GitHub repo is provided, ask for GitHub credentials
+    github_user_name = None
+    github_user_email = None
+
+    # If GitHub repo is provided, ask for GitHub credentials and token
     if github_repo:
         github_user_name = input("Enter your GitHub username: ").strip()
         github_user_email = input("Enter your GitHub email: ").strip()
+        github_token = input("Enter your GitHub Personal Access Token (PAT): ").strip()
+
+        # Inject the token into the repo URL
+        if github_token:
+            github_repo = github_repo.replace("https://", f"https://{github_token}@")
 
         # Set up Git config for the user
         try:
             subprocess.run(['git', 'config', '--global', 'user.name', github_user_name], check=True)
             subprocess.run(['git', 'config', '--global', 'user.email', github_user_email], check=True)
-            print(f"Git configured with name: {github_user_name} and email: {github_user_email}")
+            print(f"[+] Git configured with name: {github_user_name} and email: {github_user_email}")
         except subprocess.CalledProcessError:
             print("[!] Error setting up Git configuration. Please check your Git setup.")
 
@@ -38,6 +47,7 @@ def get_user_input():
         "github_repo": github_repo,
         "auto_push": auto_push
     }
+
 
 def log_to_changelog(new_files):
     entries = []
