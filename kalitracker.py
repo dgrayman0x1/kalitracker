@@ -106,16 +106,28 @@ def log_to_changelog(new_files, deleted_files):
 
 def push_to_github(repo_url, files_to_commit):
     try:
+        # Initialize Git if not already a repo
         if not os.path.isdir(".git"):
             subprocess.run(["git", "init"], check=True)
             subprocess.run(["git", "remote", "add", "origin", repo_url], check=True)
 
-        subprocess.run(["git", "add"] + files_to_commit, check=True)
-        subprocess.run(["git", "commit", "-m", "KaliTracker update"], check=True)
+        # Set main branch if needed
         subprocess.run(["git", "branch", "-M", "main"], check=True)
-        subprocess.run(["git", "push", "-u", "origin", "main"], check=True)
 
+        # Stage all relevant changes (adds, deletions)
+        subprocess.run(["git", "add", "-A"], check=True)
+
+        # Check if there's anything to commit
+        result = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
+        if not result.stdout.strip():
+            print("[*] No changes to commit.")
+            return
+
+        # Commit and push
+        subprocess.run(["git", "commit", "-m", "KaliTracker update"], check=True)
+        subprocess.run(["git", "push", "-u", "origin", "main"], check=True)
         print("[+] Pushed changes to GitHub.")
+
     except subprocess.CalledProcessError as e:
         print(f"[!] Git error: {e}")
 
