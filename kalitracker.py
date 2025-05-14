@@ -18,6 +18,19 @@ def get_user_input():
     github_repo = input("Enter your GitHub repo URL (leave blank to skip): ").strip()
     auto_push = github_repo and input("Auto-commit & push to GitHub every run? [y/N]: ").strip().lower() == "y"
 
+    # If GitHub repo is provided, ask for GitHub credentials
+    if github_repo:
+        github_user_name = input("Enter your GitHub username: ").strip()
+        github_user_email = input("Enter your GitHub email: ").strip()
+
+        # Set up Git config for the user
+        try:
+            subprocess.run(['git', 'config', '--global', 'user.name', github_user_name], check=True)
+            subprocess.run(['git', 'config', '--global', 'user.email', github_user_email], check=True)
+            print(f"Git configured with name: {github_user_name} and email: {github_user_email}")
+        except subprocess.CalledProcessError:
+            print("[!] Error setting up Git configuration. Please check your Git setup.")
+
     return {
         "monitor_dir": monitor_dir,
         "log_metadata": log_metadata,
