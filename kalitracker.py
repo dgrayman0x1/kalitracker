@@ -1,6 +1,9 @@
-#!/usr/bin/env python3
-
 import os
+import subprocess
+import json
+from datetime import datetime
+
+CHANGELOG_FILE = "changelog.json"
 
 def get_user_input():
     print("[+] Welcome to KaliTracker Setup")
@@ -23,12 +26,51 @@ def get_user_input():
         "auto_push": auto_push
     }
 
+def log_to_changelog(new_files):
+    entries = []
+    if os.path.exists(CHANGELOG_FILE):
+        with open(CHANGELOG_FILE, "r") as f:
+            try:
+                entries = json.load(f)
+            except json.JSONDecodeError:
+                pass  # Invalid JSON or empty file
+
+    for path, mtime in new_files:
+        entries.append({
+            "path": path,
+            "timestamp": datetime.fromtimestamp(mtime).isoformat()
+        })
+
+    with open(CHANGELOG_FILE, "w") as f:
+        json.dump(entries, f, indent=2)
+
+    print(f"[+] Logged {len(new_files)} new files to {CHANGELOG_FILE}")
+
+def push_to_github(repo_url, files_to_commit):
+    try:
+        # Ensure we're in a git repo
+        if not os.path.isdir(".git"):
+            subprocess.run(["git", "init"], check=True)
+            subprocess.run(["git", "remote", "add", "origin", repo_url], check=True)
+
+        # Stage files
+        subprocess.run(["git", "add"] + files_to_commit, check=True)
+
+        # Commit
+        subprocess.run(["git", "commit", "-m", "KaliTracker update"], check=True)
+
+        # Set default branch if needed
+        subprocess.run(["git", "branch", "-M", "main"], check=True)
+
+        # Push
+        subprocess.run(["git", "push", "-u", "origin", "main"], check=True)
+        print("[+] Pushed changes to GitHub.")
+    except subprocess.CalledProcessError as e:
+        print(f"[!] Git error: {e}")
+
 def find_new_files(directory, known_files):
     new_files = []
     for root, dirs, files in os.walk(directory, topdown=True, followlinks=False):
-        # Optionally skip system directories to reduce noise (optional)
-        # dirs[:] = [d for d in dirs if not d.startswith("proc")]
-
         for name in files:
             try:
                 full_path = os.path.join(root, name)
@@ -46,10 +88,24 @@ def find_new_files(directory, known_files):
                 continue
     return new_files
 
-
-# Entry point
-if __name__ == "__main__":
+def main():
     config = get_user_input()
     print("[*] Your Config:")
     for key, value in config.items():
         print(f"    {key}: {value}")
+
+    # Simulate known files (can be modified as needed)
+    known_files = set()
+
+    # Find new files
+    new_files = find_new_files(config["monitor_dir"], known_files)
+
+    if config["log_metadata"]:
+        log_to_changelog(new_files)
+
+    if config["auto_push"]:
+        push_to_github(config["github_repo"], [CHANGELOG_FILE])
+
+# Entry point
+if __name__ == "__main__":
+    main()
