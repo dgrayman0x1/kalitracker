@@ -10,25 +10,29 @@ def get_user_input():
     print("[+] Welcome to KaliTracker Setup")
 
     # Prompt for directory and expand ~ to full home directory
-    default_dir = os.path.expanduser("~/Downloads")  # Default to Downloads for simplicity
+    default_dir = os.path.expanduser("~/")
     monitor_dir = input(f"Enter directory to monitor [{default_dir}]: ").strip() or default_dir
     monitor_dir = os.path.abspath(os.path.expanduser(monitor_dir))
 
     log_metadata = input("Log new/deleted files to changelog? [y/N]: ").strip().lower() == "y"
     copy_files = input("Copy new files to tracked_files/? [y/N]: ").strip().lower() == "y"
-    github_repo = input("Enter your GitHub repo URL (leave blank to skip): ").strip()
-    auto_push = github_repo and input("Auto-commit & push to GitHub every run? [y/N]: ").strip().lower() == "y"
+    
+    github_repo = ""
+    auto_push = False
 
-    if github_repo:
-        github_user_name = input("Enter your GitHub username: ").strip()
-        github_user_email = input("Enter your GitHub email: ").strip()
+    if input("Do you want to link a GitHub repository? [y/N]: ").strip().lower() == "y":
+        print("\n[!] GitHub now requires a Personal Access Token (PAT) for HTTPS Git operations.")
+        print("    Example format: https://<PAT>@github.com/username/repo.git")
+        print("    You can generate a PAT at: https://github.com/settings/tokens\n")
 
-        try:
-            subprocess.run(['git', 'config', '--global', 'user.name', github_user_name], check=True)
-            subprocess.run(['git', 'config', '--global', 'user.email', github_user_email], check=True)
-            print(f"[+] Git configured with name: {github_user_name} and email: {github_user_email}")
-        except subprocess.CalledProcessError:
-            print("[!] Error setting up Git configuration. Please check your Git setup.")
+        while True:
+            github_repo = input("Enter your GitHub repo URL (with PAT embedded): ").strip()
+            if github_repo.startswith("https://") and "@github.com" in github_repo:
+                break
+            else:
+                print("[!] Invalid format. Please include the PAT in the URL.")
+
+        auto_push = input("Auto-commit & push to GitHub every run? [y/N]: ").strip().lower() == "y"
 
     return {
         "monitor_dir": monitor_dir,
