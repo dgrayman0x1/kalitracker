@@ -112,15 +112,18 @@ def log_to_changelog(new_files, deleted_files):
 
 def push_to_github(repo_url, files_to_commit):
     try:
-        # Initialize Git if not already a repo
+        # Initialize Git repo if not already
         if not os.path.isdir(".git"):
             subprocess.run(["git", "init"], check=True)
-            subprocess.run(["git", "remote", "add", "origin", repo_url], check=True)
 
-        # Set main branch if needed
+        # Always reset remote origin with latest PAT-enabled repo URL
+        subprocess.run(["git", "remote", "remove", "origin"], check=False)
+        subprocess.run(["git", "remote", "add", "origin", repo_url], check=True)
+
+        # Set branch name to main
         subprocess.run(["git", "branch", "-M", "main"], check=True)
 
-        # Stage all relevant changes (adds, deletions)
+        # Stage all changes
         subprocess.run(["git", "add", "-A"], check=True)
 
         # Check if there's anything to commit
