@@ -9,30 +9,30 @@ SNAPSHOT_FILE = ".kalitracker_snapshot.json"
 def get_user_input():
     print("[+] Welcome to KaliTracker Setup")
 
-    # Prompt for directory and expand ~ to full home directory
     default_dir = os.path.expanduser("~/")
     monitor_dir = input(f"Enter directory to monitor [{default_dir}]: ").strip() or default_dir
     monitor_dir = os.path.abspath(os.path.expanduser(monitor_dir))
 
     log_metadata = input("Log new/deleted files to changelog? [y/N]: ").strip().lower() == "y"
     copy_files = input("Copy new files to tracked_files/? [y/N]: ").strip().lower() == "y"
-    
-    github_repo = ""
-    auto_push = False
 
-    if input("Do you want to link a GitHub repository? [y/N]: ").strip().lower() == "y":
-        print("\n[!] GitHub now requires a Personal Access Token (PAT) for HTTPS Git operations.")
-        print("    Example format: https://<PAT>@github.com/username/repo.git")
-        print("    You can generate a PAT at: https://github.com/settings/tokens\n")
+    github_repo = input("Enter your GitHub repo URL with PAT (e.g. https://<PAT>@github.com/user/repo.git): ").strip()
+    if github_repo and "@" not in github_repo:
+        print("[!] The URL you provided does not include a personal access token (PAT). GitHub requires a PAT for HTTPS access.")
+        github_repo = ""
 
-        while True:
-            github_repo = input("Enter your GitHub repo URL (with PAT embedded): ").strip()
-            if github_repo.startswith("https://") and "@github.com" in github_repo:
-                break
-            else:
-                print("[!] Invalid format. Please include the PAT in the URL.")
+    auto_push = github_repo and input("Auto-commit & push to GitHub every run? [y/N]: ").strip().lower() == "y"
 
-        auto_push = input("Auto-commit & push to GitHub every run? [y/N]: ").strip().lower() == "y"
+    if github_repo:
+        github_user_name = input("Enter your GitHub username: ").strip()
+        github_user_email = input("Enter your GitHub email: ").strip()
+
+        try:
+            subprocess.run(['git', 'config', '--global', 'user.name', github_user_name], check=True)
+            subprocess.run(['git', 'config', '--global', 'user.email', github_user_email], check=True)
+            print(f"[+] Git configured with name: {github_user_name} and email: {github_user_email}")
+        except subprocess.CalledProcessError:
+            print("[!] Error setting up Git configuration. Please check your Git setup.")
 
     return {
         "monitor_dir": monitor_dir,
@@ -47,7 +47,7 @@ def find_recent_files(directory):
     deleted_files = []
 
     now = time.time()
-    cutoff = now - 86400  # 24 hours ago
+    cutoff = now - 86400  # 24 hours
 
     current_files = set()
 
@@ -62,13 +62,12 @@ def find_recent_files(directory):
                 current_files.add(full_path)
 
                 if mtime >= cutoff:
+                    print(f"  [*] Found file: {full_path} | Modified: {mtime}")
                     new_files.append((full_path, mtime))
-                print(f"  [*] Found file: {full_path} | Modified: {mtime}")  # Debug print
             except Exception as e:
                 print(f"  [!] Skipping {full_path}: {e}")
                 continue
 
-    # Reading the previous snapshot to detect deletions
     previous_files = set()
     if os.path.exists(SNAPSHOT_FILE):
         try:
@@ -112,27 +111,22 @@ def log_to_changelog(new_files, deleted_files):
 
 def push_to_github(repo_url, files_to_commit):
     try:
-        # Initialize Git repo if not already
+        print(f"[*] Setting Git remote to: {repo_url}")
+
         if not os.path.isdir(".git"):
             subprocess.run(["git", "init"], check=True)
+            subprocess.run(["git", "remote", "add", "origin", repo_url], check=True)
+        else:
+            subprocess.run(["git", "remote", "set-url", "origin", repo_url], check=True)
 
-        # Always reset remote origin with latest PAT-enabled repo URL
-        subprocess.run(["git", "remote", "remove", "origin"], check=False)
-        subprocess.run(["git", "remote", "add", "origin", repo_url], check=True)
-
-        # Set branch name to main
         subprocess.run(["git", "branch", "-M", "main"], check=True)
-
-        # Stage all changes
         subprocess.run(["git", "add", "-A"], check=True)
 
-        # Check if there's anything to commit
         result = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
         if not result.stdout.strip():
             print("[*] No changes to commit.")
             return
 
-        # Commit and push
         subprocess.run(["git", "commit", "-m", "KaliTracker update"], check=True)
         subprocess.run(["git", "push", "-u", "origin", "main"], check=True)
         print("[+] Pushed changes to GitHub.")
